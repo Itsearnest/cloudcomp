@@ -46,23 +46,23 @@ function getSnippetWithAttributes(req, res) {
 		author = "%",
 		language = "%",
 		code = "%";
-	var tagsWhere = null;
+	var tagsWhere = "";
 	if(req.query.id !== undefined)
-		id = "" + req.query.id;
+		id = "%" + req.query.id + "%";
 	if(req.query.name !== undefined)
-		name = req.query.name;
+		name = "%" + req.query.name + "%";
 	if(req.query.description !== undefined)
-		description = req.query.description;
+		description = "%" + req.query.description + "%";
 	if(req.query.author !== undefined)
-		author = req.query.author;
+		author = "%" + req.query.author + "%";
 	if(req.query.language !== undefined)
-		language = req.query.language;
+		language = "%" + req.query.language + "%";
 	if(req.query.code !== undefined)
-		code = req.query.code;
+		code = "%" + req.query.code + "%";
 	if(req.query.tags !== undefined)
 		tagsWhere = " AND '" + req.query.tags + "' = ANY(tags)";
 
-	client.query("SELECT * FROM snippets where to_char(id, '9999999') like $1 and name like $2 and description like $3 and author like $4 and language like $5 and code like $6", ["%", "%", "%", "%", "%", "%"]).then(function(dbres){
+	client.query("SELECT * FROM snippets where to_char(id, '9999999') like $1 and name like $2 and description like $3 and author like $4 and language like $5 and code like $6" + tagsWhere, [id, name, description, author, language, code]).then(function(dbres){
 		var retString = "";
 		var count = 0;
 		for(let row of dbres.rows){
