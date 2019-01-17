@@ -1,0 +1,10 @@
+{
+	"dbcredentials" : {
+		"user": "ngzkypmawwhuqi",
+		"host": "ec2-46-137-121-216.eu-west-1.compute.amazonaws.com",
+		"database": "dn6l0a90gtv5j",
+		"password": "087aa6a171d48ff68ae472b6d2bb94aa0acbc1382f756afd2a9a222e8919f3e7",
+		"port": 5432,
+		"ssl": true
+	}
+}
