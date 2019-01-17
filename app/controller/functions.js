@@ -29,13 +29,15 @@ function getAllSnippets(req, res) {
 		res.send(retJson);
 	}).catch(function(dberr){
 		if(dberr){
-			if(dberr.code === "42P01")
-				functions.error404function(req, res);
-			else if(dberr.code === "42703")
+			if(dberr.code === "42703" || dberror.code === "42601" || dberr.code === "22P02")
 				functions.error400function(req, res);
+			else if(dberr.code === "42P01")
+				functions.error404function(req, res);
 			else
 				functions.error500function(req, res);
 		}
+	}).catch(function(err){
+		functions.error500function(req, res);
 	});
 }
 
@@ -47,6 +49,7 @@ function getSnippetWithAttributes(req, res) {
 		language = "%",
 		code = "%";
 	var tagsWhere = "";
+
 	if(req.query.id !== undefined)
 		id = "%" + req.query.id + "%";
 	if(req.query.name !== undefined)
@@ -70,28 +73,74 @@ function getSnippetWithAttributes(req, res) {
 			count++;
 		}
 		retString = "{" + retString.substring(0, retString.length -1) + "}";
-		console.log(retString);
 		var retJson = JSON.parse(retString);
 		res.send(retJson);
 	}).catch(function(dberr){
-		console.log(dberr);
 		if(dberr){
-			if(dberr.code === "42703" || dberror.code === "42601")
+			if(dberr.code === "42703" || dberror.code === "42601" || dberr.code === "22P02")
 				functions.error400function(req, res);
 			else if(dberr.code === "42P01")
 				functions.error404function(req, res);
 			else
 				functions.error500function(req, res);
 		}
+	}).catch(function(err){
+		functions.error500function(req, res);
 	});
 }
 
 exports.postSnippet = function(req, res){
-	res.send({url: req.originalUrl, type: "post snippets", callStatus: "success"});
+	if(req.body.constructor === Object && Object.keys(req.body).length === 0){
+		functions.error422function(req, res);
+		return;
+	}
+	var name = req.body.name,
+		description = req.body.description,
+		author = req.body.author,
+		language = req.body.language,
+		code = req.body.code,
+		tags = req.body.tags;
+	
+	if(name === undefined || description === undefined || author === undefined || language === undefined || code === undefined){
+		functions.error422function(req, res);
+		return;
+	}
+	if(tags === undefined){
+		tags = [];
+	}
+	client.query("INSERT INTO snippets VALUES(DEFAULT, $1, $2, $3, $4, $5, $6);", [name, description, author, language, code, tags]).then(function(dbres){
+		client.query("SELECT * FROM snippets WHERE name = $1 order by id desc LIMIT 1;", [name]).then(function(dbres){
+			var retString = "";
+			var count = 0;
+			for(let row of dbres.rows){
+				retString += "\"" + count + "\":" + JSON.stringify(row) + ",";
+				count++;
+			}
+			retString = "{" + retString.substring(0, retString.length -1) + "}";
+			var retJson = JSON.parse(retString);
+			res.send(retJson);
+		});
+	}).catch(function(dberr){
+		if(dberr){
+			if(dberr.code === "42703" || dberror.code === "42601" || dberr.code === "22P02")
+				functions.error400function(req, res);
+			else if(dberr.code === "42P01")
+				functions.error404function(req, res);
+			else
+				functions.error500function(req, res);
+		}
+	}).catch(function(err){
+		functions.error500function(req, res);
+	});
 };
 
 exports.getSnippetById = function(req, res){
-	client.query("SELECT * FROM snippets WHERE id = $1;", [1]).then(function(dbres){
+	var id = req.originalUrl.split("/")[2];
+	if(isNaN(id)){
+		functions.error400function(req, res);
+		return;
+	}
+	client.query("SELECT * FROM snippets WHERE id = $1;", [id]).then(function(dbres){
 		var retString = "";
 		var count = 0;
 		for(let row of dbres.rows){
@@ -103,22 +152,89 @@ exports.getSnippetById = function(req, res){
 		res.send(retJson);
 	}).catch(function(dberr){
 		if(dberr){
-			if(dberr.code === "42P01")
-				functions.error404function(req, res);
-			else if(dberr.code === "42703")
+			if(dberr.code === "42703" || dberror.code === "42601" || dberr.code === "22P02")
 				functions.error400function(req, res);
+			else if(dberr.code === "42P01")
+				functions.error404function(req, res);
 			else
 				functions.error500function(req, res);
 		}
+	}).catch(function(err){
+		functions.error500function(req, res);
 	});
 };
 
 exports.updateSnippetById = function(req, res){
-	res.send({url: req.originalUrl, type: "put snippet with id", callStatus: "success"});
+	if(req.body.constructor === Object && Object.keys(req.body).length === 0){
+		functions.error422function(req, res);
+		return;
+	}
+	var id = req.originalUrl.split("/")[2];
+	if(isNaN(id)){
+		functions.error400function(req, res);
+		return;
+	}
+	var name = req.body.name,
+		description = req.body.description,
+		author = req.body.author,
+		language = req.body.language,
+		code = req.body.code,
+		tags = req.body.tags;
+	
+	if(name === undefined || description === undefined || author === undefined || language === undefined || code === undefined){
+		functions.error422function(req, res);
+		return;
+	}
+	if(tags === undefined){
+		tags = [];
+	}
+	client.query("UPDATE snippets SET name = $1, description = $2, author = $3, language = $4, code = $5, tags = $6 where id = $7;", [name, description, author, language, code, tags, id]).then(function(dbres){
+		client.query("SELECT * FROM snippets WHERE id = $1;", [id]).then(function(dbres){
+			var retString = "";
+			var count = 0;
+			for(let row of dbres.rows){
+				retString += "\"" + count + "\":" + JSON.stringify(row) + ",";
+				count++;
+			}
+			retString = "{" + retString.substring(0, retString.length -1) + "}";
+			var retJson = JSON.parse(retString);
+			res.send(retJson);
+		});
+	}).catch(function(dberr){
+		if(dberr){
+			if(dberr.code === "42703" || dberror.code === "42601" || dberr.code === "22P02")
+				functions.error400function(req, res);
+			else if(dberr.code === "42P01")
+				functions.error404function(req, res);
+			else
+				functions.error500function(req, res);
+		}
+	}).catch(function(err){
+
+		functions.error500function(req, res);
+	});
 };
 
 exports.deleteSnippetById = function(req, res){
-	res.send({url: req.originalUrl, type: "delete snippet with id", callStatus: "success"});
+	var id = req.originalUrl.split("/")[2];
+	if(isNaN(id)){
+		functions.error400function(req, res);
+		return;
+	}
+	client.query("DELETE FROM snippets WHERE id = $1;", [id]).then(function(dbres){
+		res.send({"status": "success", "id": id});
+	}).catch(function(dberr){
+		if(dberr){
+			if(dberr.code === "42703" || dberror.code === "42601" || dberr.code === "22P02")
+				functions.error400function(req, res);
+			else if(dberr.code === "42P01")
+				functions.error404function(req, res);
+			else
+				functions.error500function(req, res);
+		}
+	}).catch(function(err){
+		functions.error500function(req, res);
+	});
 };
 
 exports.error400function =  function(req, res){
@@ -127,6 +243,10 @@ exports.error400function =  function(req, res){
 
 exports.error404function =  function(req, res){
 	res.status(404).send({error: "404: " + req.originalUrl + " not found"});
+};
+
+exports.error422function = function(req, res){
+	res.status(422).send({error: "422: Unprocessable Entity, invalid JSON format in body or missing argument"});
 };
 
 exports.error500function =  function(req, res){
